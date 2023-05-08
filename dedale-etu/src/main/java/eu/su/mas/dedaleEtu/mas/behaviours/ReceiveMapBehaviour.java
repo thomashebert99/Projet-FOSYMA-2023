@@ -27,7 +27,8 @@ public class ReceiveMapBehaviour extends SimpleBehaviour{
     public void action() {
         //System.out.println(this.myAgent.getLocalName() +" Is waiting for a Map");
         nextBehaviourSelect = 1;
-        ACLMessage received = this.myAgent.blockingReceive(MessageTemplate.MatchPerformative(ACLMessage.INFORM),50);
+        MessageTemplate mt = MessageTemplate.and(MessageTemplate.MatchPerformative(ACLMessage.INFORM), MessageTemplate.MatchProtocol("SHARE-MAP"));
+        ACLMessage received = this.myAgent.blockingReceive(mt,50);
         if(received != null){
         	SerializableSimpleGraph<String, MapAttribute> sgreceived=null;
         	try {
@@ -39,7 +40,7 @@ public class ReceiveMapBehaviour extends SimpleBehaviour{
         	myagent.mergeMap(sgreceived);
             nextBehaviourSelect = 2;
             System.out.println(this.myagent.getLocalName() + " : --received map from " + received.getSender().getLocalName());
-        }	
+        }
         
     }
 
@@ -48,13 +49,14 @@ public class ReceiveMapBehaviour extends SimpleBehaviour{
         if (nextBehaviourSelect != 1)
             if(myagent.getPreviousBehaviour().equals("RequestConnectionBehaviour")){
                 nextBehaviourSelect = 2 ; //pass to send map
-            }else{ //ca vient de sendmap
+            } else {
                 nextBehaviourSelect = 1; //pass to exp
             }
         myagent.setPreviousBehaviour("ReceiveMapBehaviour");
         return true;
     }
 
+    @Override
     public int onEnd() {
         return nextBehaviourSelect;
     }

@@ -9,7 +9,7 @@ import jade.lang.acl.MessageTemplate;
 public class CheckMailBehaviour extends SimpleBehaviour {
 
     private static final long serialVersionUID = -3648610114610477617L;
-	private int nextBehaviourSelect; //1 = request connection , 2 = send map
+	private int nextBehaviourSelect; //2 = request connection , 1 = send map
     private BaseAgent myagent;
 
     public CheckMailBehaviour(final BaseAgent myagent) {
@@ -23,26 +23,26 @@ public class CheckMailBehaviour extends SimpleBehaviour {
         final ACLMessage msg = this.myAgent.receive(msgTemplate);
         if (msg != null) {
             if(msg.getPostTimeStamp() - System.currentTimeMillis() < 50){
-                System.out.println(this.myagent.getLocalName() + " : --Result received from " + msg.getSender().getLocalName());
-                nextBehaviourSelect = 2;
-            }else{
-                System.out.println(this.myagent.getLocalName() + " : --Warning message from  "+msg.getSender().getLocalName()+" too old !--");
+                //System.out.println(this.myagent.getLocalName() + " : --Result received from " + msg.getSender().getLocalName());
                 nextBehaviourSelect = 1;
+            }else{
+                //System.out.println(this.myagent.getLocalName() + " : --Warning message from  "+msg.getSender().getLocalName()+" too old !--");
+                nextBehaviourSelect = 2;
             }
         }else{
-            nextBehaviourSelect = 1; //no message was found
+            nextBehaviourSelect = 2; //no message was found
         }
 
     }
 
     @Override
     public boolean done() {
-    	myagent.setPreviousBehaviour("CheckMailBehavior");
+    	myagent.setPreviousBehaviour("CheckMailBehaviour");
         return true;
     }
 
+    @Override
     public int onEnd() {
         return nextBehaviourSelect;
-
     }
 }

@@ -16,7 +16,7 @@ import eu.su.mas.dedaleEtu.mas.knowledge.MapRepresentation.MapAttribute;
 public class SendMapBehaviour extends SimpleBehaviour {
 
     private static final long serialVersionUID = 7504267628641151550L;
-	private int nextBehaviourSelect; //1 = go to receive map , 2 = go to send position
+	private int nextBehaviourSelect; //1 = go to receive map , 2 = go to exploration
     private BaseAgent myagent;
 
 
@@ -37,7 +37,7 @@ public class SendMapBehaviour extends SimpleBehaviour {
 			msg.addReceiver(new AID(agentName,AID.ISLOCALNAME));
 		}
         
-        System.out.println(this.myagent.getLocalName() + " : --map null = " + (this.myagent.getMyMap()==null));
+        //System.out.println(this.myagent.getLocalName() + " : --map null = " + (this.myagent.getMyMap()==null));
         SerializableSimpleGraph<String, MapAttribute> sg=this.myagent.getMyMap().getSerializableGraph();
 		try {					
 			msg.setContentObject(sg);
@@ -50,15 +50,16 @@ public class SendMapBehaviour extends SimpleBehaviour {
 
     @Override
     public boolean done() {
-        if(myagent.getPreviousBehaviour().equals("CheckMailBehavior")){
+        if(myagent.getPreviousBehaviour().equals("CheckMailBehaviour")){
             nextBehaviourSelect = 1; // pass to receive map
         }else{
-            nextBehaviourSelect = 2; //pass to "exp
+            nextBehaviourSelect = 2; //pass to exploration
         }
         myagent.setPreviousBehaviour("SendMapBehaviour");
         return true;
     }
 
+    @Override
     public int onEnd() {
         return nextBehaviourSelect;
     }

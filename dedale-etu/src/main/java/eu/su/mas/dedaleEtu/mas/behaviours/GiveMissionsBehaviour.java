@@ -98,60 +98,94 @@ public class GiveMissionsBehaviour extends SimpleBehaviour {
 		
 		case 1:
 			listTreasures.addAll(this.myagent.getTreasures());
+			Boolean empty = false;
+			if (listTreasures.isEmpty()) {
+				empty = true;
+			}
 			Map<String, PersonalStats> agentsName = new HashMap<String, PersonalStats>(this.myagent.getAgentsInfos());
 			
 			while(agentsName.isEmpty()==false) {
 				Date oldest = null;
 				Treasure obj = null;
-				for (Treasure t : listTreasures) {
-					if (t.getTime().compareTo(oldest) < 0) {
-						oldest = t.getTime();
-						obj = t;
+				if (empty==false) {
+					for (Treasure t : listTreasures) {
+						if (t.getTime().compareTo(oldest) < 0) {
+							oldest = t.getTime();
+							obj = t;
+						}
 					}
 				}
-				Couple<String, List<Couple<String, String>>> mission = this.findBestConfig(obj, agentsName);
+				Couple<String, List<Couple<String, String>>> mission = null;
+				if (empty==false) {
+					mission = this.findBestConfig(obj, agentsName);
+				}
 				ACLMessage msgMission = new ACLMessage(ACLMessage.REQUEST);
 				msgMission.setSender(this.myagent.getAID());
 				msgMission.setProtocol("MISSION");
-				msgMission.addReceiver(new AID(mission.getLeft(),AID.ISLOCALNAME));
-				try {					
-					msgMission.setContentObject(new Couple<Location, String>(obj.getLocation(), "collect"));
+				if (empty==false) {
+					msgMission.addReceiver(new AID(mission.getLeft(),AID.ISLOCALNAME));
+				} else {
+					for (String name : agentsName.keySet()) {
+						msgMission.addReceiver(new AID(name,AID.ISLOCALNAME));
+					}
+				}
+				try {
+					List<String> helpers = new ArrayList<String>();
+					if (empty==false) {
+						for (Couple<String, String> helper : mission.getRight()) {
+							helpers.add(helper.getLeft());
+						}
+						msgMission.setContentObject(new Couple<Couple<Location, String>, List<String>>(new Couple<Location, String>(obj.getLocation(), "Collect"), helpers));
+					} else {
+						msgMission.setContentObject(new Couple<Couple<Location, String>, List<String>>(new Couple<Location, String>(null, "Explore"), null));
+					}
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
 				((AbstractDedaleAgent)this.myAgent).sendMessage(msgMission);
 				
-				if (mission.getRight().isEmpty()==false) {
-					List<String> neighbors = this.myagent.getMyMap().getNeighborNodes(obj.getLocation().getLocationId());
-					String previousTarget = null;
-					List<String> previousNeighbors = new ArrayList<String>();
-					for (Couple<String, String> helper : mission.getRight()) {
-						String target = null;
-						for (String n : neighbors) {
-							if ((n.equals(previousTarget) || previousNeighbors.contains(n))==false){
-								target = n;
+				if (empty==false) {
+					if (mission.getRight().isEmpty()==false) {
+						List<String> neighbors = this.myagent.getMyMap().getNeighborNodes(obj.getLocation().getLocationId());
+						String previousTarget = null;
+						List<String> previousNeighbors = new ArrayList<String>();
+						for (Couple<String, String> helper : mission.getRight()) {
+							String target = null;
+							for (String n : neighbors) {
+								if ((n.equals(previousTarget) || previousNeighbors.contains(n))==false){
+									target = n;
+								}
 							}
+							ACLMessage msgMission2 = new ACLMessage(ACLMessage.REQUEST);
+							msgMission2.setSender(this.myagent.getAID());
+							msgMission2.setProtocol("MISSION");
+							msgMission2.addReceiver(new AID(helper.getLeft(),AID.ISLOCALNAME));
+							try {
+								List<String> helpers = new ArrayList<String>();
+								for (Couple<String, String> helper2 : mission.getRight()) {
+									if (helper2.getLeft().equals(helper.getLeft())==false) {
+										helpers.add(helper2.getLeft());
+									}
+								}
+								helpers.add(mission.getLeft());
+								msgMission2.setContentObject(new Couple<Couple<Location, String>, List<String>>(new Couple<Location, String>(new gsLocation(target), helper.getRight()), helpers));
+							} catch (IOException e) {
+								e.printStackTrace();
+							}
+							((AbstractDedaleAgent)this.myAgent).sendMessage(msgMission2);
+							previousTarget = target;
+							previousNeighbors = neighbors;
+							neighbors = this.myagent.getMyMap().getNeighborNodes(target);
 						}
-						ACLMessage msgMission2 = new ACLMessage(ACLMessage.REQUEST);
-						msgMission2.setSender(this.myagent.getAID());
-						msgMission2.setProtocol("MISSION");
-						msgMission2.addReceiver(new AID(helper.getLeft(),AID.ISLOCALNAME));
-						try {					
-							msgMission2.setContentObject(new Couple<Location, String>(new gsLocation(target), helper.getRight()));
-						} catch (IOException e) {
-							e.printStackTrace();
-						}
-						((AbstractDedaleAgent)this.myAgent).sendMessage(msgMission2);
-						previousTarget = target;
-						previousNeighbors = neighbors;
-						neighbors = this.myagent.getMyMap().getNeighborNodes(target);
 					}
+					agentsName.remove(mission.getLeft());
+					for (Couple<String, String> helper : mission.getRight()) {
+						agentsName.remove(helper.getLeft());
+					}
+					listTreasures.remove(obj);
+				} else {
+					agentsName.clear();
 				}
-				agentsName.remove(mission.getLeft());
-				for (Couple<String, String> helper : mission.getRight()) {
-					agentsName.remove(helper.getLeft());
-				}
-				listTreasures.remove(obj);
 			}
 			break;
 			
@@ -273,12 +307,12 @@ public class GiveMissionsBehaviour extends SimpleBehaviour {
 				for (String agent : capacityMapCopy.keySet()) {
 					helper = agent;
 				}
-				helpers.add(new Couple<String, String>(helper, "Collect"));
+				helpers.add(new Couple<String, String>(helper, "Collect-help"));
 				nessCp -= agentsList.get(helper).getCapacity();
 				
 			} else {
 				for (String agent : capacityMapCopy.keySet()) {
-					helpers.add(new Couple<String, String>(agent, "Collect"));
+					helpers.add(new Couple<String, String>(agent, "Collect-help"));
 					nessCp -= agentsList.get(agent).getCapacity();
 					break;
 				}
@@ -377,7 +411,12 @@ public class GiveMissionsBehaviour extends SimpleBehaviour {
 	@Override
 	public boolean done() {
 		// TODO Auto-generated method stub
-		return false;
+		return true;
+	}
+	
+	@Override
+	public int onEnd() {
+		return 0;
 	}
 
 }

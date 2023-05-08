@@ -50,6 +50,7 @@ public class ExplorationBehaviour extends SimpleBehaviour {
 	private static final long serialVersionUID = 8567689731496787661L;
 
 	private boolean finished = false;
+	private int next = 1;
 
 	/**
 	 * Current knowledge of the agent regarding the environment
@@ -117,6 +118,7 @@ public class ExplorationBehaviour extends SimpleBehaviour {
 			if (!this.myMap.hasOpenNode()){
 				//Explo finished
 				finished=true;
+				next = 2;
 				System.out.println(this.myAgent.getLocalName()+" - Exploration successufully done, behaviour removed.");
 			}else{
 				//4) select next move.
@@ -131,53 +133,43 @@ public class ExplorationBehaviour extends SimpleBehaviour {
 					//System.out.println("nextNode notNUll - "+this.myAgent.getLocalName()+"-- list= "+this.myMap.getOpenNodes()+"\n -- nextNode: "+nextNode);
 				}
 				
-//				//5) At each time step, the agent check if he received a graph from a teammate. 	
-//				// If it was written properly, this sharing action should be in a dedicated behaviour set.
-//				MessageTemplate msgTemplate=MessageTemplate.and(
-//						MessageTemplate.MatchProtocol("SHARE-TOPO"),
-//						MessageTemplate.MatchPerformative(ACLMessage.INFORM));
-//				ACLMessage msgReceived=this.myAgent.receive(msgTemplate);
-//				if (msgReceived!=null) {
-//					SerializableSimpleGraph<String, MapAttribute> sgreceived=null;
-//					try {
-//						sgreceived = (SerializableSimpleGraph<String, MapAttribute>)msgReceived.getContentObject();
-//					} catch (UnreadableException e) {
-//						// TODO Auto-generated catch block
-//						e.printStackTrace();
-//					}
-//					this.myMap.mergeMap(sgreceived);
-//				}
 
-				((AbstractDedaleAgent)this.myAgent).moveTo(new gsLocation(nextNodeId));
+				Boolean success = ((AbstractDedaleAgent)this.myAgent).moveTo(new gsLocation(nextNodeId));
+				while (success==false) {
+					Random r= new Random();
+					int moveId=1+r.nextInt(lobs.size()-1);
+					success = ((AbstractDedaleAgent)this.myAgent).moveTo(lobs.get(moveId).getLeft());
+				}
 				finished = true;
 				((BaseAgent) myAgent).setMyMap(this.myMap);
 			}
 			
-			for (Couple<Observation, Integer> o : lobs.get(0).getRight()) {
-				
-				Observation type = null;
-				Integer quantity = null;
-				Integer lockpicking = null;
-				Integer strength = null;
-				
-				switch(o.getLeft()) {
-				
-				case GOLD:
-					type = o.getLeft();
-					quantity = o.getRight();
-				case DIAMOND:
-					type = o.getLeft();
-					quantity = o.getRight();
-				case LOCKPICKING:
-					lockpicking = o.getRight();
-				case STRENGH:
-					strength = o.getRight();
+			if(lobs.get(0).getRight().isEmpty()==false) {
+				for (Couple<Observation, Integer> o : lobs.get(0).getRight()) {
 					
+					Observation type = null;
+					Integer quantity = null;
+					Integer lockpicking = null;
+					Integer strength = null;
+					
+					switch(o.getLeft()) {
+					
+					case GOLD:
+						type = o.getLeft();
+						quantity = o.getRight();
+					case DIAMOND:
+						type = o.getLeft();
+						quantity = o.getRight();
+					case LOCKPICKING:
+						lockpicking = o.getRight();
+					case STRENGH:
+						strength = o.getRight();
+						
+					}
+					
+					Treasure t = new Treasure(myPosition, type, quantity, lockpicking, strength, new Date());
+					((BaseAgent) myAgent).addTreasure(t);
 				}
-				
-				Treasure t = new Treasure(myPosition, type, quantity, lockpicking, strength, new Date());
-				((BaseAgent) myAgent).addTreasure(t);
-				
 			}
 
 		}
@@ -187,14 +179,13 @@ public class ExplorationBehaviour extends SimpleBehaviour {
 
 	@Override
     public int onEnd() {
-		//System.out.println(this.myagent.getLocalName() + " : --end explo test");
-        return 1;
+		//System.out.println(this.myagent.getLocalName() + " : --end explo " + next);
+        return next;
     }
 
     @Override
     public boolean done() {
-        myagent.setPreviousBehaviour("ExplorationBehaviour");
-        //System.out.println(this.myagent.getLocalName() + " : --done test");
+    	//System.out.println(this.myagent.getLocalName() + " : --done explo " + finished);
         return finished;
     }
 

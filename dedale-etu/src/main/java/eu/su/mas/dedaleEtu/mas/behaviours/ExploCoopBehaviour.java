@@ -64,7 +64,7 @@ public class ExploCoopBehaviour extends SimpleBehaviour {
  * @param myMap known map of the world the agent is living in
  * @param agentNames name of the agents to share the map with
  */
-	public ExploCoopBehaviour(final BaseAgent myagent, MapRepresentation myMap,List<String> agentNames) {
+	public ExploCoopBehaviour(final AbstractDedaleAgent myagent, MapRepresentation myMap,List<String> agentNames) {
 		super(myagent);
 		this.myMap=myMap;
 		this.list_agentNames=agentNames;
